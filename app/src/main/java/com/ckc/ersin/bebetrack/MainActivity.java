@@ -23,26 +23,13 @@ import com.goebl.david.WebbException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-class AccountManager {
-    String pin;
-    String token;
+import java.io.IOException;
 
-    public String getPin() {
-        return pin;
-    }
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
-    public void setPin(String pin) {
-        this.pin = pin;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-}
 public class MainActivity extends AppCompatActivity {
 
     AccountManager accountManager;
@@ -81,39 +68,56 @@ public class MainActivity extends AppCompatActivity {
         testButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                testButton.setEnabled(false);
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
+
                         String urlString = "http://bebetrack.com/api/create";
                         try {
-                            testButton.setEnabled(false);
                             String internationalCode = "01";
                             String phone = "1234567890";
                             if (phoneField != null) {
                                 phone = phoneField.getText().toString();
                             }
                             if (internationalCodeField != null) {
-                                internationalCode = internationalCodeField.getText().toString();;
+                                internationalCode = internationalCodeField.getText().toString();
                             }
-                            JSONObject params = new JSONObject();
-                            params.put("phone", phone);
-                            params.put("internationalCode", internationalCode);
-                            JSONObject response = Webb.create().post(urlString)
-                                    .useCaches(false)
-                                    .header(Webb.HDR_CONTENT_TYPE, Webb.APP_JSON)
-                                    .body(params)
-                                    .connectTimeout(30000)
-                                    .ensureSuccess()
-                                    .asJsonObject()
-                                    .getBody();
-                            Log.w("response", response.toString());
-                            accountManager.setPin(response.get("pin").toString());
-                            accountManager.setToken(response.get("token").toString());
-                            setResultText();
-                        } catch (JSONException e) {
-                            setErrorText(e.getMessage());
-                            e.printStackTrace();
-                        } catch (WebbException e) {
+
+//                            JSONObject params = new JSONObject();
+//                            params.put("phone", phone);
+//                            params.put("internationalCode", internationalCode);
+
+//                            AccountManager accountManager = new AccountManager();
+                            accountManager.phone = phone;
+                            accountManager.internationalCode = internationalCode;
+
+                            Retrofit retrofit = new Retrofit.Builder()
+                                    .baseUrl("http://bebetrack.com/api/")
+                                    .addConverterFactory(GsonConverterFactory.create())
+                                    .build();
+                            BebetrackService service = retrofit.create(BebetrackService.class);
+                            accountManager = service.create(accountManager).execute().body();
+                            setResultText(accountManager);
+//                            JSONObject response = Webb.create().post(urlString)
+//                                    .useCaches(false)
+//                                    .header(Webb.HDR_CONTENT_TYPE, Webb.APP_JSON)
+//                                    .body(params)
+//                                    .connectTimeout(30000)
+//                                    .ensureSuccess()
+//                                    .asJsonObject()
+//                                    .getBody();
+//                            Log.w("response", response.toString());
+//                            accountManager.setPin(response.get("pin").toString());
+//                            accountManager.setToken(response.get("token").toString());
+//                            setResultText();
+//                        } catch (JSONException e) {
+//                            setErrorText(e.getMessage());
+//                            e.printStackTrace();
+//                        } catch (WebbException e) {
+//                            setErrorText(e.getMessage());
+//                            e.printStackTrace();
+                        } catch (IOException e) {
                             setErrorText(e.getMessage());
                             e.printStackTrace();
                         }
@@ -150,13 +154,13 @@ public class MainActivity extends AppCompatActivity {
         //
     }
 
-    protected void setResultText() {
+    protected void setResultText(AccountManager accountManager) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 testButton.setEnabled(true);
-                pinTextView.setText(accountManager.getPin());
-                tokenTextView.setText(accountManager.getToken());
+                pinTextView.setText(MainActivity.this.accountManager.pin);
+                tokenTextView.setText(MainActivity.this.accountManager.token);
             }
         });
     }
